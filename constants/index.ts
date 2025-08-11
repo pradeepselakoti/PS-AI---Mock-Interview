@@ -1,4 +1,4 @@
-import { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
+import { CreateAssistantDTO, CreateWorkflowDTO } from "@vapi-ai/web/dist/api";
 import { z } from "zod";
 
 export const mappings = {
@@ -97,6 +97,74 @@ export const mappings = {
   "aws amplify": "amplify",
 };
 
+export const generator: CreateWorkflowDTO = {
+  name: "Generate Interview",
+  nodes: [
+    {
+      name: "start",
+      type: "conversation",
+      isStart: true,
+      metadata: { position: { x: 0, y: 0 } },
+      prompt: "Speak first. Greet the user and help them create a new AI Interviewer. Ask them about the job role, experience level (Junior, Mid-level, Senior), interview type (Technical, Behavioral, Mixed), number of questions, and technology stack they want to focus on.",
+      voice: {
+        model: "aura-2",
+        voiceId: "thalia",
+        provider: "deepgram",
+      },
+    },
+    {
+      name: "conversation_inform_generation",
+      type: "conversation",
+      metadata: { position: { x: -11, y: 485 } },
+      prompt: "Say that the Interview will be generated shortly.",
+      voice: { provider: "deepgram", voiceId: "thalia", model: "aura-2" },
+    },
+    {
+      name: "tool_generate_interview",
+      type: "conversation",
+      metadata: { position: { x: -16, y: 704 } },
+      prompt: "Perfect! I have collected all the information needed for your interview. Let me generate the interview questions now. The role is {{ role }}, level is {{ level }}, interview type is {{ interviewType }}, number of questions is {{ amount }}, and tech stack is {{ techstack }}. Please wait a moment while I create your personalized interview.",
+      voice: { provider: "deepgram", voiceId: "thalia", model: "aura-2" },
+    },
+    {
+      name: "conversation_success",
+      type: "conversation",
+      metadata: { position: { x: -18, y: 1003 } },
+      prompt: "Thank the user for the conversation and inform them that the interview was generated successfully.",
+      voice: { provider: "deepgram", voiceId: "thalia", model: "aura-2" },
+    },
+    {
+      name: "conversation_end",
+      type: "conversation",
+      metadata: { position: { x: 76, y: 1272 } },
+      prompt: "The interview session is now complete. Thank you for using our service. Goodbye!",
+      voice: { provider: "deepgram", voiceId: "thalia", model: "aura-2" },
+    },
+  ],
+  edges: [
+    {
+      from: "start",
+      to: "conversation_inform_generation",
+      condition: { type: "ai", prompt: "If user provided all the required variables" },
+    },
+    {
+      from: "conversation_inform_generation",
+      to: "tool_generate_interview",
+      condition: { type: "ai", prompt: "" },
+    },
+    {
+      from: "tool_generate_interview",
+      to: "conversation_success",
+      condition: { type: "ai", prompt: "" },
+    },
+    {
+      from: "conversation_success",
+      to: "conversation_end",
+      condition: { type: "ai", prompt: "" },
+    },
+  ],
+};
+
 export const interviewer: CreateAssistantDTO = {
   name: "Interviewer",
   firstMessage:
@@ -136,7 +204,7 @@ Be professional, yet warm and welcoming:
 Use official yet friendly language.
 Keep responses concise and to the point (like in a real voice interview).
 Avoid robotic phrasing—sound natural and conversational.
-Answer the candidate’s questions professionally:
+Answer the candidate's questions professionally:
 
 If asked about the role, company, or expectations, provide a clear and relevant answer.
 If unsure, redirect the candidate to HR for more details.
@@ -203,6 +271,18 @@ export const interviewCovers = [
   "/tiktok.png",
   "/yahoo.png",
 ];
+
+type Interview = {
+  id: string;
+  userId: string;
+  role: string;
+  type: string;
+  techstack: string[];
+  level: string;
+  questions: string[];
+  finalized: boolean;
+  createdAt: string;
+};
 
 export const dummyInterviews: Interview[] = [
   {

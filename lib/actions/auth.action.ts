@@ -1,7 +1,7 @@
 'use server'
 
 import { db, auth } from "@/firebase/admin";
-import { CollectionReference, DocumentData, DocumentReference } from "firebase-admin/firestore";
+import { CollectionReference, DocumentData, DocumentReference, Query } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 
 
@@ -118,3 +118,33 @@ export async function isAuthenticated(){
 
     return !!user; 
 }
+export async function getInterviewByUserId(userId: string): Promise<Interview[] | null> {
+    const interviews = await db
+        .collection('interview')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get(); 
+        
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+    })) as Interview[];
+}
+
+export async function getLatestInterviews(params: GetLatestInterviewsParams): Promise<Interview[] | null> {
+    const { userId, limit = 20 } = params;
+    
+    const interviews = await db
+        .collection('interview')
+        .orderBy('createAt', 'desc')
+        .where('finalized', '==',true)
+        .where('userId', '!=', userId)
+        .limit(limit)
+        .get(); 
+        
+    return interviews.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+    })) as Interview[];
+}
+
